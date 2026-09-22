@@ -240,6 +240,20 @@ The Streamlit application contains:
 
 ---
 
+## 📊 Sample Business Mode Result
+
+Customer AI can process an external customer CSV and classify customers using the trained ML pipeline.
+
+### Test Dataset
+
+[Download Sample Customer CSV](test_data/customer_ai_test_business.csv)
+
+### Generated Report
+
+[View Sample Customer AI Report](outputs/customer_ai_report.pdf)
+
+---
+
 ## 📌 Project Status
 
 **Completed**
