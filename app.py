@@ -1,9 +1,17 @@
 import os
-import joblib
 import numpy as np
 import pandas as pd
 import streamlit as st
 import plotly.express as px
+
+from src.customer_ai import (
+    FEATURES,
+    evaluate_clustering,
+    load_model_artifacts,
+    predict_customers,
+    transform_customer_data,
+    validate_customer_data,
+)
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -39,28 +47,6 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(
     BASE_DIR, "data", "wholesale_customers.csv"
 )
-
-SCALER_PATH = os.path.join(
-    BASE_DIR, "models", "scaler.pkl"
-)
-
-PCA_PATH = os.path.join(
-    BASE_DIR, "models", "pca.pkl"
-)
-
-KMEANS_PATH = os.path.join(
-    BASE_DIR, "models", "kmeans.pkl"
-)
-
-FEATURES = [
-    "Fresh",
-    "Milk",
-    "Grocery",
-    "Frozen",
-    "Detergents_Paper",
-    "Delicassen"
-]
-
 
 # ============================================================
 # CUSTOM CSS
@@ -133,16 +119,19 @@ def load_data():
 @st.cache_resource
 def load_models():
 
-    scaler = joblib.load(SCALER_PATH)
-    pca = joblib.load(PCA_PATH)
-    kmeans = joblib.load(KMEANS_PATH)
-
-    return scaler, pca, kmeans
+    return load_model_artifacts(
+        os.path.join(BASE_DIR, "models"),
+        FEATURES,
+    )
 
 
 df = load_data()
 
-scaler, pca, kmeans = load_models()
+try:
+    scaler, pca, kmeans = load_models()
+except (FileNotFoundError, RuntimeError, ValueError) as exc:
+    st.error(f"Model artifacts are unavailable: {exc}")
+    st.stop()
 
 
 # ============================================================
@@ -250,18 +239,8 @@ def predict_customer(values):
     )
 
     # Same preprocessing used during training
-    X_log = np.log1p(customer)
-
-    # Standardization
-    X_scaled = scaler.transform(X_log)
-
-    # PCA
-    X_pca = pca.transform(X_scaled)
-
-    # K-Means prediction
-    cluster = int(
-        kmeans.predict(X_pca)[0]
-    )
+    X_pca = transform_customer_data(customer, scaler, pca)
+    cluster = int(predict_customers(customer, scaler, pca, kmeans)[0])
 
     segment = SEGMENT_NAMES.get(
         cluster,
@@ -643,7 +622,8 @@ def create_customer_pdf(customer, cluster, segment):
     )
     story.append(
         Paragraph(
-            "The trained PCA pipeline retains approximately 92.07% "
+            f"The trained PCA pipeline retains approximately "
+            f"{pca.explained_variance_ratio_.sum() * 100:.2f}% "
             "of the information.",
             styles["Normal"],
         )
@@ -717,30 +697,39 @@ if page == "🏠 Home":
     with c1:
         st.metric(
             "Training Customers",
-            "440"
+            f"{len(df):,}",
+            border=True,
         )
 
     with c2:
         st.metric(
             "Shopping Categories",
-            "6"
+            f"{len(FEATURES)}",
+            border=True,
         )
 
     with c3:
         st.metric(
             "Customer Segments",
-            "3"
+            f"{kmeans.n_clusters}",
+            border=True,
         )
 
     with c4:
         st.metric(
             "PCA Information Retained",
-            "92.07%"
+            f"{pca.explained_variance_ratio_.sum() * 100:.2f}%",
+            border=True,
         )
 
     st.divider()
 
     st.header("✨ What can Customer AI do?")
+
+    st.caption(
+        "Use the trained K-Means model for individual analysis, then inspect "
+        "the business view to compare the discovered customer groups."
+    )
 
     col1, col2 = st.columns(2)
 
@@ -867,7 +856,7 @@ elif page == "👤 Analyze Me":
     analyze = st.button(
         "🔍 ANALYZE MY PROFILE",
         type="primary",
-        use_container_width=True
+        width="stretch"
     )
 
     if analyze:
@@ -944,7 +933,8 @@ elif page == "👤 Analyze Me":
         with m3:
             st.metric(
                 "AI Segment",
-                segment
+                segment,
+                border=True,
             )
 
         # ====================================================
@@ -970,7 +960,7 @@ elif page == "👤 Analyze Me":
 
         st.plotly_chart(
             fig,
-            use_container_width=True
+            width="stretch"
         )
 
         # ====================================================
@@ -1005,7 +995,7 @@ elif page == "👤 Analyze Me":
                 "Segment Average": "{:,.0f}",
                 "Difference (%)": "{:+.1f}%"
             }),
-            use_container_width=True,
+            width="stretch",
             hide_index=True
         )
 
@@ -1036,7 +1026,7 @@ elif page == "👤 Analyze Me":
 
         st.plotly_chart(
             fig_compare,
-            use_container_width=True
+            width="stretch"
         )
 
         # ====================================================
@@ -1277,7 +1267,7 @@ elif page == "👤 Analyze Me":
             file_name="customer_ai_report.pdf",
             mime="application/pdf",
             type="primary",
-            use_container_width=True,
+            width="stretch",
         )
 
     # ============================================================
@@ -1479,7 +1469,7 @@ elif page == "👤 Analyze Me":
     
         st.plotly_chart(
             fig_whatif,
-            use_container_width=True
+            width="stretch"
         )
     
         # --------------------------------------------------------
@@ -1606,7 +1596,7 @@ elif page == "💡 My Insights":
 
         st.dataframe(
             customer,
-            use_container_width=True,
+            width="stretch",
             hide_index=True
         )
 
@@ -1717,62 +1707,16 @@ elif page == "🏢 Business Mode":
         try:
             uploaded_df = pd.read_csv(uploaded_file)
 
-            missing_columns = [
-                feature
-                for feature in FEATURES
-                if feature not in uploaded_df.columns
-            ]
+            uploaded_df = validate_customer_data(uploaded_df)
+            st.success(
+                f"CSV loaded successfully: {len(uploaded_df):,} customers."
+            )
 
-            if missing_columns:
+        except pd.errors.EmptyDataError:
+            st.error("The uploaded CSV is empty. Please provide a header and at least one row.")
+            uploaded_df = None
 
-                st.error(
-                    "The uploaded CSV is missing these required columns: "
-                    + ", ".join(missing_columns)
-                )
-
-                uploaded_df = None
-
-            else:
-
-                numeric_data = uploaded_df[FEATURES].apply(
-                    pd.to_numeric,
-                    errors="coerce"
-                )
-
-                invalid_count = int(
-                    numeric_data.isna().sum().sum()
-                )
-
-                if invalid_count > 0:
-
-                    st.error(
-                        f"The uploaded file contains {invalid_count} "
-                        "missing or non-numeric spending values. "
-                        "Please clean the CSV and upload it again."
-                    )
-
-                    uploaded_df = None
-
-                elif (numeric_data < 0).any().any():
-
-                    st.error(
-                        "Spending values cannot be negative. "
-                        "Please check the uploaded CSV."
-                    )
-
-                    uploaded_df = None
-
-                else:
-
-                    uploaded_df = uploaded_df.copy()
-                    uploaded_df[FEATURES] = numeric_data
-
-                    st.success(
-                        f"CSV loaded successfully: "
-                        f"{len(uploaded_df):,} customers."
-                    )
-
-        except Exception as exc:
+        except (TypeError, ValueError, pd.errors.ParserError) as exc:
 
             st.error(
                 f"Could not read the CSV file: {exc}"
@@ -1783,20 +1727,9 @@ elif page == "🏢 Business Mode":
     if uploaded_df is not None:
 
         # Apply the exact trained pipeline.
-        upload_log = np.log1p(
-            uploaded_df[FEATURES]
-        )
-
-        upload_scaled = scaler.transform(
-            upload_log
-        )
-
-        upload_pca = pca.transform(
-            upload_scaled
-        )
-
-        upload_labels = kmeans.predict(
-            upload_pca
+        upload_pca = transform_customer_data(uploaded_df, scaler, pca)
+        upload_labels = predict_customers(
+            uploaded_df, scaler, pca, kmeans
         )
 
         analyzed_upload = uploaded_df.copy()
@@ -1852,7 +1785,7 @@ elif page == "🏢 Business Mode":
                 "Customers": "{:,.0f}",
                 "Share (%)": "{:.1f}%"
             }),
-            use_container_width=True,
+            width="stretch",
             hide_index=True
         )
 
@@ -1865,7 +1798,7 @@ elif page == "🏢 Business Mode":
 
         st.plotly_chart(
             fig_upload,
-            use_container_width=True
+            width="stretch"
         )
 
         st.subheader("💰 Uploaded Customer Spending Profile")
@@ -1894,14 +1827,14 @@ elif page == "🏢 Business Mode":
 
         st.plotly_chart(
             fig_upload_profile,
-            use_container_width=True
+            width="stretch"
         )
 
         with st.expander("📋 View Classified Uploaded Customers"):
 
             st.dataframe(
                 analyzed_upload,
-                use_container_width=True,
+                width="stretch",
                 hide_index=True
             )
 
@@ -1910,7 +1843,7 @@ elif page == "🏢 Business Mode":
             data=analyzed_upload.to_csv(index=False).encode("utf-8"),
             file_name="customer_ai_classified_customers.csv",
             mime="text/csv",
-            use_container_width=True
+            width="stretch"
         )
 
     # --------------------------------------------------------
@@ -1953,25 +1886,29 @@ elif page == "🏢 Business Mode":
     with c1:
         st.metric(
             "Total Customers",
-            f"{total_customers:,}"
+            f"{total_customers:,}",
+            border=True,
         )
 
     with c2:
         st.metric(
             "Customer Segments",
-            "3"
+            f"{kmeans.n_clusters}",
+            border=True,
         )
 
     with c3:
         st.metric(
             "High-Value Customers",
-            f"{high_value_count:,}"
+            f"{high_value_count:,}",
+            border=True,
         )
 
     with c4:
         st.metric(
             "Categories",
-            "6"
+            f"{len(FEATURES)}",
+            border=True,
         )
 
     # --------------------------------------------------------
@@ -1979,6 +1916,24 @@ elif page == "🏢 Business Mode":
     # --------------------------------------------------------
 
     st.header("🎯 Customer Segment Distribution")
+
+    segment_explanations = pd.DataFrame({
+        "Segment": list(SEGMENT_DESCRIPTIONS),
+        "Interpretation": [
+            SEGMENT_DESCRIPTIONS[name]
+            for name in SEGMENT_DESCRIPTIONS
+        ],
+    })
+    with st.container(border=True):
+        st.caption(
+            "Names are descriptive summaries of the current cluster profiles; "
+            "they are not ground-truth customer labels."
+        )
+        st.dataframe(
+            segment_explanations,
+            width="stretch",
+            hide_index=True,
+        )
 
     distribution_df = pd.DataFrame({
         "Segment": segment_counts.index,
@@ -2000,7 +1955,7 @@ elif page == "🏢 Business Mode":
                 "Customers": "{:,.0f}",
                 "Share (%)": "{:.1f}%"
             }),
-            use_container_width=True,
+            width="stretch",
             hide_index=True
         )
 
@@ -2015,7 +1970,7 @@ elif page == "🏢 Business Mode":
 
         st.plotly_chart(
             fig_distribution,
-            use_container_width=True
+            width="stretch"
         )
 
     # --------------------------------------------------------
@@ -2041,7 +1996,7 @@ elif page == "🏢 Business Mode":
             feature: "{:,.0f}"
             for feature in FEATURES
         }),
-        use_container_width=True,
+        width="stretch",
         hide_index=True
     )
 
@@ -2062,7 +2017,7 @@ elif page == "🏢 Business Mode":
 
     st.plotly_chart(
         fig_profile,
-        use_container_width=True
+        width="stretch"
     )
 
     # --------------------------------------------------------
@@ -2094,7 +2049,7 @@ elif page == "🏢 Business Mode":
 
     st.plotly_chart(
         fig_totals,
-        use_container_width=True
+        width="stretch"
     )
 
     # --------------------------------------------------------
@@ -2224,7 +2179,7 @@ elif page == "🏢 Business Mode":
 
     st.plotly_chart(
         fig_selected,
-        use_container_width=True
+        width="stretch"
     )
 
     # --------------------------------------------------------
@@ -2237,7 +2192,7 @@ elif page == "🏢 Business Mode":
 
         st.dataframe(
             display_customers,
-            use_container_width=True,
+            width="stretch",
             hide_index=True
         )
 
@@ -2302,7 +2257,7 @@ elif page == "🎓 ML Lab":
 
         st.dataframe(
             df,
-            use_container_width=True,
+            width="stretch",
             hide_index=True
         )
 
@@ -2310,7 +2265,7 @@ elif page == "🎓 ML Lab":
 
         st.dataframe(
             df.describe(),
-            use_container_width=True
+            width="stretch"
         )
 
     # --------------------------------------------------------
@@ -2334,7 +2289,7 @@ elif page == "🎓 ML Lab":
 
         st.dataframe(
             skew_df,
-            use_container_width=True,
+            width="stretch",
             hide_index=True
         )
 
@@ -2357,7 +2312,7 @@ elif page == "🎓 ML Lab":
 
         st.dataframe(
             scaled_df.head(),
-            use_container_width=True
+            width="stretch"
         )
 
     # --------------------------------------------------------
@@ -2390,7 +2345,7 @@ elif page == "🎓 ML Lab":
 
         st.dataframe(
             pca_table,
-            use_container_width=True,
+            width="stretch",
             hide_index=True
         )
 
@@ -2413,7 +2368,7 @@ elif page == "🎓 ML Lab":
 
         st.plotly_chart(
             fig,
-            use_container_width=True
+            width="stretch"
         )
 
     # --------------------------------------------------------
@@ -2453,7 +2408,7 @@ elif page == "🎓 ML Lab":
 
         st.plotly_chart(
             fig,
-            use_container_width=True
+            width="stretch"
         )
 
         st.subheader("Cluster Sizes")
@@ -2535,7 +2490,7 @@ elif page == "🎓 ML Lab":
 
         st.plotly_chart(
             fig,
-            use_container_width=True
+            width="stretch"
         )
 
 
@@ -2558,7 +2513,6 @@ elif page == "📊 Model Comparison":
     """, unsafe_allow_html=True)
 
     from sklearn.cluster import Birch
-    from sklearn.metrics import silhouette_score
 
     X = df[FEATURES]
 
@@ -2571,10 +2525,7 @@ elif page == "📊 Model Comparison":
     # K-Means
     km_labels = kmeans.predict(X_pca)
 
-    km_score = silhouette_score(
-        X_pca,
-        km_labels
-    )
+    km_metrics = evaluate_clustering(X_pca, km_labels)
 
     # BIRCH
     birch = Birch(
@@ -2587,29 +2538,30 @@ elif page == "📊 Model Comparison":
         X_pca
     )
 
-    birch_score = silhouette_score(
-        X_pca,
-        birch_labels
-    )
+    birch_metrics = evaluate_clustering(X_pca, birch_labels)
 
     comparison = pd.DataFrame({
         "Model": [
-            "K-Means Scratch",
-            "K-Means sklearn",
-            "BIRCH Scratch",
-            "BIRCH sklearn"
+            "K-Means (trained)",
+            "BIRCH"
         ],
         "Silhouette Score": [
-            0.2857,
-            km_score,
-            0.3122,
-            birch_score
+            km_metrics["silhouette"],
+            birch_metrics["silhouette"]
+        ],
+        "Davies-Bouldin Score": [
+            km_metrics["davies_bouldin"],
+            birch_metrics["davies_bouldin"]
+        ],
+        "Calinski-Harabasz Score": [
+            km_metrics["calinski_harabasz"],
+            birch_metrics["calinski_harabasz"]
         ]
     })
 
     st.dataframe(
         comparison,
-        use_container_width=True,
+        width="stretch",
         hide_index=True
     )
 
@@ -2623,13 +2575,16 @@ elif page == "📊 Model Comparison":
 
     st.plotly_chart(
         fig,
-        use_container_width=True
+        width="stretch"
     )
 
     st.info(
         "K-Means is used for real-time customer prediction "
         "because the trained model directly supports prediction "
-        "for new customer inputs."
+        "for new customer inputs. Higher silhouette and "
+        "Calinski-Harabasz scores are generally better; lower "
+        "Davies-Bouldin scores are generally better. These metrics "
+        "describe cluster separation, not predictive accuracy."
     )
 
 
@@ -2642,3 +2597,10 @@ st.divider()
 st.caption(
     "Customer AI • Real-Time Machine Learning Customer Segmentation"
 )
+
+
+# python -m venv venv
+# venv\Scripts\Activate.ps1
+# pip install -r requirements.txt
+# python src\train_model.py        # only if models/*.pkl are missing
+# streamlit run app.py

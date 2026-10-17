@@ -5,6 +5,7 @@ __pycache__/
 
 # Virtual environments
 .venv/
+.venv-clean/
 venv/
 env/
 
@@ -30,3 +31,13 @@ dist/
 
 # Logs
 *.log
+
+# Test and local application state
+.pytest_cache/
+.coverage
+htmlcov/
+.streamlit/secrets.toml
+
+# Generated reports and plots
+outputs/*.pdf
+outputs/*.png

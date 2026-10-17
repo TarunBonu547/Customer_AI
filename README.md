@@ -1,275 +1,190 @@
-# 🤖 Customer AI
+# Customer AI
 
-**Customer AI** is a machine learning application for customer segmentation and spending-pattern analysis. It uses unsupervised learning techniques to identify customer segments and provides interactive insights for individual customers as well as businesses.
+Customer AI is a Streamlit portfolio project for customer segmentation and spending-pattern analysis. It applies an unsupervised learning pipeline to the UCI Wholesale Customers dataset and exposes the result through a dashboard for individual analysis, business CSV classification, model comparison, and PDF reporting.
 
-## 🚀 Features
+## Problem and motivation
 
-### 👤 Customer Analysis
-- Analyze a new customer's spending pattern in real time
-- Predict the customer's segment using a trained K-Means model
-- Compare spending with similar customers
-- Generate personalized insights and recommendations
+Businesses often need a first-pass view of customer behavior before designing targeted promotions or account strategies. This project demonstrates how to turn tabular spending data into reproducible customer segments while keeping the transformation and prediction paths consistent.
 
-### 💰 Smart Savings Advisor
-- Compare spending against the average of the predicted customer segment
-- Identify categories with significantly higher or lower spending
-- Provide segment-based spending suggestions
+The segments are analytical groupings, not verified customer identities, predictions of future revenue, or causal business recommendations.
 
-### 🔄 What-If Simulator
-- Modify spending categories interactively
-- Re-run the trained ML pipeline on the simulated values
-- Observe how changes in spending affect the predicted customer segment
+## Features
 
-### 🏢 Business Mode
-- Analyze an existing customer dataset
-- Upload a custom CSV containing customer spending data
-- Classify uploaded customers into segments
-- Visualize segment distribution and spending patterns
-- Download classified customer data
+- Real-time customer segmentation with K-Means.
+- Consistent log transformation, standardization, and PCA at training and prediction time.
+- Segment profiles, spending comparisons, insights, and what-if simulation.
+- Business CSV upload with required-column, numeric, finite, non-negative, and empty-input validation.
+- Downloadable classified CSV files and customer PDF reports.
+- ML Lab views for preprocessing, PCA, K-Means, and BIRCH.
+- Live K-Means versus BIRCH evaluation using silhouette, Davies-Bouldin, and Calinski-Harabasz metrics.
+- Pytest coverage and a GitHub Actions test workflow.
 
-### 📄 Customer Reports
-- Generate downloadable PDF reports
-- Include customer segment, spending profile, comparisons, insights, and recommendations
+## Screenshots
 
-### 🎓 ML Lab
-Interactive exploration of:
-- Data exploration
-- Data preprocessing
-- PCA
-- K-Means clustering
-- BIRCH clustering
+These screenshots were captured from the local Streamlit application using
+the checked-in dataset and model artifacts:
 
-### 📊 Model Comparison
-Compare clustering approaches using silhouette scores and visualize their performance.
+![Customer AI home dashboard](docs/screenshots/home.png)
 
----
+![Analyze Me customer profile](docs/screenshots/analyze-me.png)
 
-## 🧠 Machine Learning Pipeline
+![Business customer intelligence](docs/screenshots/business-mode.png)
 
-The application uses the following preprocessing and clustering workflow:
+![Model comparison metrics](docs/screenshots/model-comparison.png)
+
+## Technology stack
+
+Python, pandas, NumPy, scikit-learn, joblib, Streamlit, Plotly, ReportLab, Matplotlib, and pytest.
+
+## Machine learning methodology
 
 ```text
-Customer Spending Data
-        ↓
-Log Transformation
-        ↓
-StandardScaler
-        ↓
-PCA
-        ↓
-K-Means Clustering
-        ↓
-Customer Segment
+Wholesale customer spending
+        -> validate required numeric features
+        -> log1p transformation
+        -> StandardScaler
+        -> PCA (4 components by default)
+        -> K-Means (3 clusters by default)
+        -> descriptive segment profile
 ```
 
-The application also includes **BIRCH** as an alternative clustering approach for model comparison.
+K-Means is the deployed prediction model because it supports assigning new customers to existing clusters. BIRCH is evaluated as a comparison method on the same transformed feature representation. Clustering metrics measure separation and compactness; they are not classification accuracy.
 
----
+## Architecture and workflow
 
-## 📊 Customer Segmentation
+```mermaid
+flowchart TD
+        A[Wholesale customer CSV] --> B[Validate required numeric features]
+        B --> C[log1p transformation]
+        C --> D[StandardScaler]
+        D --> E[PCA]
+        E --> F[K-Means training or prediction]
+        E --> G[BIRCH comparison]
+        F --> H[Segment profiles and recommendations]
+        F --> I[Business CSV classification]
+        H --> J[Streamlit dashboard and PDF report]
+        I --> K[Classified CSV download]
+        L[Saved scaler PCA K-Means artifacts] --> M[Artifact compatibility validation]
+        M --> F
+```
 
-The trained K-Means model identifies three customer segments:
-
-| Segment | Description |
-|---|---|
-| **High-Value Broad Buyer** | Relatively strong spending across several product categories |
-| **Grocery & Household Focused** | Spending concentrated around grocery, milk, and household products |
-| **General / Lower-Spending** | Comparatively lower overall spending across the analyzed categories |
-
-These segment names are descriptive labels assigned to the clusters based on their spending characteristics.
-
----
-
-## 📁 Project Structure
+## Project structure
 
 ```text
 Customer_AI/
-│
-├── data/
-│   └── wholesale_customers.csv
-│
-├── models/
-│   ├── scaler.pkl
-│   ├── pca.pkl
-│   └── kmeans.pkl
-│
-├── notebooks/
-│   └── Machine learning experiments
-│
-├── outputs/
-│   └── Generated results
-│
+├── app.py                         # Streamlit entry point
 ├── src/
-│   ├── train_model.py
-│   └── test_realtime.py
-│
-├── app.py
+│   ├── customer_ai.py             # Validation, transforms, predictions, metrics
+│   ├── train_model.py             # Reproducible model training CLI
+│   └── test_realtime.py           # Manual prediction smoke script
+├── tests/
+│   ├── test_customer_ai.py        # Unit tests for data and ML behavior
+│   ├── test_app_smoke.py          # Headless Streamlit startup test
+│   └── test_app_uploads.py        # Headless CSV upload interaction tests
+├── data/                          # Source and experiment CSV files
+├── models/                        # Existing serialized model artifacts
+├── test_data/                     # Small sample upload CSV
+├── notebooks/                     # Experiment scripts
+├── outputs/                       # Generated local reports and plots
 ├── requirements.txt
-├── .gitignore
-└── README.md
+├── .github/workflows/ci.yml
+└── .streamlit/config.toml         # Streamlit hosting defaults
 ```
 
----
+## Installation
 
-## 🛠️ Technologies Used
-
-- **Python**
-- **Pandas** — data manipulation and analysis
-- **NumPy** — numerical computation
-- **Scikit-learn** — machine learning and clustering
-- **Joblib** — model persistence
-- **Streamlit** — interactive web application
-- **Plotly** — interactive visualizations
-- **ReportLab** — PDF report generation
-- **Jupyter Notebook** — experimentation and analysis
-
----
-
-## ⚙️ Installation
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/TarunBonu547/Customer_AI.git
-cd Customer_AI
-```
-
-### 2. Create a virtual environment
-
-```bash
-python -m venv venv
-```
-
-Activate it on Windows:
+Python 3.11 or newer is required by the pinned Streamlit and scikit-learn versions. Windows PowerShell:
 
 ```powershell
-venv\Scripts\activate
+git clone https://github.com/TarunBonu547/Customer_AI.git
+cd Customer_AI
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 ```
 
-### 3. Install dependencies
+If PowerShell execution policy prevents activation, run the commands from Command Prompt or invoke `.venv\Scripts\python.exe` directly.
 
-```bash
-pip install -r requirements.txt
-```
+General Python environments can use the equivalent `python -m venv .venv`, the activation command for that shell, and `python -m pip install -r requirements.txt`.
 
-### 4. Run the application
+## Run the application
 
-```bash
+From the repository root:
+
+```powershell
 streamlit run app.py
 ```
 
-The application will open in your browser.
+The application loads the checked-in CSV and model files using paths relative to the repository, so it does not depend on a personal computer path.
 
----
+To retrain the models with the default dataset:
 
-## 📂 Input Data
-
-The application works with customer spending data containing the following six features:
-
-```text
-Fresh
-Milk
-Grocery
-Frozen
-Detergents_Paper
-Delicassen
+```powershell
+python src\train_model.py
 ```
 
-Business Mode also allows users to upload their own CSV files containing these required columns.
+Training options include `--clusters`, `--components`, and `--random-state`. Training writes the existing three model files plus `models/metadata.pkl`.
 
----
+## Input CSV format
 
-## 🔬 Machine Learning Details
-
-### Preprocessing
-
-The customer spending features are processed using:
-
-1. Log transformation
-2. StandardScaler
-3. Principal Component Analysis (PCA)
-
-### Clustering
-
-The primary customer segmentation model is **K-Means clustering**.
-
-The application also implements **BIRCH clustering** for comparison.
-
-### Real-Time Prediction
-
-A new customer's spending values are passed through the same preprocessing pipeline used during training:
+Business uploads must contain these six columns:
 
 ```text
-New Customer
-     ↓
-Log Transformation
-     ↓
-StandardScaler
-     ↓
-PCA
-     ↓
-Trained K-Means Model
-     ↓
-Customer Segment
+Fresh,Milk,Grocery,Frozen,Detergents_Paper,Delicassen
 ```
 
-This allows the application to analyze customers who were not part of the original training dataset.
+Values must be numeric, finite, and non-negative. Additional columns, such as an account identifier, are retained in the classified download. A sample file is available at [test_data/customer_ai_test_business.csv](test_data/customer_ai_test_business.csv).
 
----
+## Evaluation
 
-## 📈 Model Evaluation
+The Model Comparison view computes metrics from the current transformed data and model labels. It reports:
 
-The project includes model comparison using the **Silhouette Score** to evaluate clustering quality.
+- Silhouette score: higher is generally better.
+- Davies-Bouldin score: lower is generally better.
+- Calinski-Harabasz score: higher is generally better.
 
-The results can be viewed from the **Model Comparison** section of the application.
+Run the application or the training command locally to obtain measurements for the exact model artifacts in use. No performance or business-impact claims are inferred from these unsupervised metrics.
 
----
+Verified on the checked-in artifacts with scikit-learn `1.9.0`:
 
-## 🖥️ Application Sections
+| Model | Silhouette | Davies-Bouldin | Calinski-Harabasz |
+| --- | ---: | ---: | ---: |
+| K-Means | 0.2882 | 1.2632 | 176.5338 |
+| BIRCH | 0.1938 | 1.5375 | 129.2209 |
 
-The Streamlit application contains:
+Across K-Means seeds `0, 7, 19, 42, 99`, the Silhouette score ranged from
+`0.2870` to `0.2900` and the adjusted Rand index against the first seed ranged
+from `0.9386` to `0.9541`. These are stability checks, not evidence of
+business impact or predictive accuracy.
 
-```text
-🏠 Home
-👤 Analyze Me
-💡 My Insights
-🏢 Business Mode
-🎓 ML Lab
-📊 Model Comparison
+## Testing
+
+```powershell
+python -m pytest -q
 ```
 
----
+The suite covers validation failures, numeric normalization, feature-order consistency, prediction behavior, clustering metric edge cases, model artifact persistence, invalid and corrupted artifacts, Streamlit startup, customer analysis, and Business Mode upload interactions.
 
-## 📊 Sample Business Mode Result
+## Deployment preparation
 
-Customer AI can process an external customer CSV and classify customers using the trained ML pipeline.
+The repository includes `.streamlit/config.toml` with headless hosting defaults. For Streamlit Community Cloud:
 
-### Test Dataset
+1. Push the repository to GitHub after reviewing the local diff.
+2. Create a new app and select the repository and branch.
+3. Set the main file path to `app.py`.
+4. Confirm `requirements.txt`, `data/wholesale_customers.csv`, and the three compatible files in `models/` are committed.
+5. Deploy, then test Home, Analyze Me, Business Mode upload, Model Comparison, and PDF generation from the hosted URL.
 
-[Download Sample Customer CSV](test_data/customer_ai_test_business.csv)
+The app is prepared for deployment but has not been deployed or assigned a live URL. Do not add secrets unless a future integration requires them.
 
-### Generated Report
+Before deploying, run `python -m pytest -q` and `streamlit run app.py` in a clean environment. This repository does not claim to be deployed or live.
 
-[View Sample Customer AI Report](outputs/customer_ai_report.pdf)
+## Known limitations and future work
 
----
+- Cluster labels and descriptive names can change after retraining because unsupervised cluster IDs have no fixed semantic meaning.
+- The current model is trained on one wholesale spending dataset and may not generalize to other industries, currencies, or time periods.
+- There is no ground-truth label for validating business usefulness.
+- Future work could add model versioning, drift monitoring, validation against a time-based holdout, and a formal segment naming configuration.
 
-## 📌 Project Status
-
-**Completed**
-
-The current version includes the core machine learning pipeline, interactive customer analysis, business analysis, model comparison, What-If simulation, Smart Savings Advisor, and downloadable customer reports.
-
----
-
-## 👨‍💻 Author
-
-**Tarun Bonu**
-
-B-Tech Student | Machine Learning
-
----
-
-## 📜 License
-
-This project is developed for educational and academic purposes.
+No license file is currently included; no license is claimed by this README.

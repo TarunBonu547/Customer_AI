@@ -1,65 +1,46 @@
+"""Run a manual prediction against the checked-in Customer AI artifacts."""
+
+from pathlib import Path
+
 import joblib
-import numpy as np
 import pandas as pd
 
+try:
+    from src.customer_ai import predict_customers
+except ModuleNotFoundError:
+    from customer_ai import predict_customers
 
-# -----------------------------
-# Load saved models
-# -----------------------------
-scaler = joblib.load("models/scaler.pkl")
-pca = joblib.load("models/pca.pkl")
-kmeans = joblib.load("models/kmeans.pkl")
-
-
-# -----------------------------
-# New customer input
-# -----------------------------
-new_customer = pd.DataFrame([{
-    "Fresh": 5000,
-    "Milk": 8000,
-    "Grocery": 15000,
-    "Frozen": 1000,
-    "Detergents_Paper": 6000,
-    "Delicassen": 1500
-}])
+BASE_DIR = Path(__file__).resolve().parents[1]
+MODEL_DIR = BASE_DIR / "models"
 
 
-# -----------------------------
-# Apply same preprocessing
-# -----------------------------
-X_log = np.log1p(new_customer)
+def main() -> None:
+    """Load the saved pipeline and print one example prediction."""
+    new_customer = pd.DataFrame(
+        [
+            {
+                "Fresh": 5000,
+                "Milk": 8000,
+                "Grocery": 15000,
+                "Frozen": 1000,
+                "Detergents_Paper": 6000,
+                "Delicassen": 1500,
+            }
+        ]
+    )
+    scaler = joblib.load(MODEL_DIR / "scaler.pkl")
+    pca = joblib.load(MODEL_DIR / "pca.pkl")
+    kmeans = joblib.load(MODEL_DIR / "kmeans.pkl")
+    cluster = int(predict_customers(new_customer, scaler, pca, kmeans)[0])
 
-X_scaled = scaler.transform(X_log)
-
-X_pca = pca.transform(X_scaled)
-
-
-# -----------------------------
-# Predict customer segment
-# -----------------------------
-cluster = kmeans.predict(X_pca)[0]
+    print("=" * 50)
+    print("REAL-TIME CUSTOMER ANALYSIS")
+    print("=" * 50)
+    print("\nCustomer Spending:")
+    print(new_customer.to_string(index=False))
+    print(f"\nPredicted Cluster : {cluster}")
+    print("\nAnalysis completed successfully!")
 
 
-# -----------------------------
-# Display result
-# -----------------------------
-segment_names = {
-    0: "Grocery & Household Focused",
-    1: "General / Lower-Spending",
-    2: "High-Value Broad Buyer"
-}
-
-print("=" * 50)
-print("REAL-TIME CUSTOMER ANALYSIS")
-print("=" * 50)
-
-print("\nCustomer Spending:")
-print(new_customer.to_string(index=False))
-
-print(f"\nPredicted Cluster : {cluster}")
-print(f"Customer Profile  : {segment_names.get(cluster, 'Customer Segment')}")
-
-print("\nPCA Representation:")
-print(X_pca[0])
-
-print("\nAnalysis completed successfully!")
+if __name__ == "__main__":
+    main()

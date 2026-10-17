@@ -1,0 +1,16 @@
+Customer AI Project — Run Instructions (Windows)
+
+1. Install Python on the device if it is not already installed.
+2. Download and extract the project folder from Google Drive.
+3. Open a terminal in the extracted project folder.
+4. Run these commands one by one:
+
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+streamlit run app.py
+
+Notes:
+- These commands assume the main file is named app.py and the project uses Streamlit.
+- If your main Python file has a different name, replace app.py with that filename.
+- If PowerShell blocks activation, run the commands in Command Prompt instead.
