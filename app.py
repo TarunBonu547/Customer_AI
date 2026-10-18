@@ -56,46 +56,114 @@ st.markdown("""
 <style>
 
 .stApp {
-    background: #f7f9fc;
+    background: #f3f6fa;
+    color: #172033;
 }
 
 .hero {
-    padding: 35px;
-    border-radius: 22px;
-    background: linear-gradient(135deg, #eef4ff, #ffffff);
-    border: 1px solid #e2e8f0;
-    margin-bottom: 25px;
+    padding: 28px 32px;
+    border-radius: 14px;
+    background: #ffffff;
+    border: 1px solid #dfe5ee;
+    border-left: 5px solid #2563eb;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+    margin: 8px 0 24px;
 }
 
 .hero h1 {
-    font-size: 42px;
-    margin-bottom: 8px;
+    color: #111827;
+    font-size: 32px;
+    letter-spacing: 0;
+    margin: 0 0 8px;
 }
 
 .hero p {
-    font-size: 18px;
     color: #64748b;
+    font-size: 16px;
+    margin: 0;
 }
 
 .result-card {
-    padding: 25px;
-    border-radius: 18px;
-    background: white;
-    border: 1px solid #e2e8f0;
-    margin: 15px 0;
+    padding: 22px 24px;
+    border-radius: 14px;
+    background: #ffffff;
+    border: 1px solid #dfe5ee;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+    margin: 14px 0;
 }
 
 .segment-name {
-    font-size: 30px;
+    color: #1d4ed8;
+    font-size: 26px;
     font-weight: 700;
 }
 
 .insight-card {
-    padding: 18px;
-    border-radius: 14px;
-    background: white;
-    border: 1px solid #e2e8f0;
-    margin-bottom: 12px;
+    padding: 16px 18px;
+    border-radius: 10px;
+    background: #ffffff;
+    border: 1px solid #dfe5ee;
+    border-left: 3px solid #14b8a6;
+    margin-bottom: 10px;
+}
+
+[data-testid="stSidebar"] {
+    background: #111827;
+    border-right: 1px solid #263247;
+}
+
+[data-testid="stSidebar"] * {
+    color: #e5e7eb;
+}
+
+[data-testid="stSidebar"] [data-testid="stRadio"] label {
+    border-radius: 8px;
+    padding: 7px 10px;
+}
+
+[data-testid="stSidebar"] [data-testid="stRadio"] label:hover {
+    background: #1f2937;
+}
+
+[data-testid="stMetric"] {
+    background: #ffffff;
+    border: 1px solid #dfe5ee;
+    border-radius: 12px;
+    padding: 14px 16px;
+    box-shadow: 0 5px 16px rgba(15, 23, 42, 0.04);
+}
+
+[data-testid="stMetricLabel"] {
+    color: #64748b;
+}
+
+[data-testid="stMetricValue"] {
+    color: #111827;
+}
+
+.stButton > button {
+    border-radius: 8px;
+    border: 1px solid #1d4ed8;
+    background: #2563eb;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.stButton > button:hover {
+    border-color: #1e40af;
+    background: #1d4ed8;
+    color: #ffffff;
+}
+
+[data-testid="stFileUploader"] {
+    border: 1px dashed #94a3b8;
+    border-radius: 12px;
+    background: #f8fafc;
+    padding: 8px;
+}
+
+section[data-testid="stSidebar"] hr {
+    border-color: #334155;
 }
 
 </style>
@@ -646,14 +714,25 @@ def create_customer_pdf(customer, cluster, segment):
 # SIDEBAR
 # ============================================================
 
-st.sidebar.title("🤖 Customer AI")
-
-st.sidebar.caption(
-    "Real-Time Customer Intelligence"
+st.sidebar.markdown(
+    """
+    <div style="padding: 8px 0 18px;">
+        <div style="font-size: 13px; letter-spacing: 1.5px; color: #93c5fd;">
+            CUSTOMER INTELLIGENCE
+        </div>
+        <div style="font-size: 24px; font-weight: 700; color: #ffffff;">
+            Customer AI
+        </div>
+        <div style="font-size: 13px; color: #94a3b8; margin-top: 4px;">
+            Segmentation workspace
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
 
 page = st.sidebar.radio(
-    "Navigation",
+    "Workspace",
     [
         "🏠 Home",
         "👤 Analyze Me",
@@ -661,15 +740,15 @@ page = st.sidebar.radio(
         "🏢 Business Mode",
         "🎓 ML Lab",
         "📊 Model Comparison"
-    ]
+    ],
+    format_func=lambda item: item.split(" ", 1)[1],
 )
 
 st.sidebar.divider()
 
 st.sidebar.info(
-    "Enter a new customer's spending pattern "
-    "and let the trained ML model identify "
-    "the most similar customer segment."
+    "Use the trained model to explore customer profiles, segment behavior, "
+    "and business-ready recommendations."
 )
 
 
@@ -678,6 +757,8 @@ st.sidebar.info(
 # ============================================================
 
 if page == "🏠 Home":
+
+    st.title("Customer AI")
 
     st.markdown("""
     <div class="hero">
