@@ -4,6 +4,12 @@ Customer AI is a Streamlit portfolio project for customer segmentation and spend
 
 The segments are analytical groupings, not verified customer identities, predictions of future revenue, or causal business recommendations.
 
+## 🚀 Live Demo
+
+Explore the deployed application to try customer analysis and clustering features, including Business Mode, model comparison, and PDF report generation.
+
+**[Launch Customer AI](https://customer-ai-tarun.streamlit.app/)**
+
 ## Table of contents
 
 - [Problem and motivation](#problem-and-motivation)
