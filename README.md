@@ -15,7 +15,7 @@ The segments are analytical groupings, not verified customer identities, predict
 - Segment profiles, spending comparisons, insights, and what-if simulation.
 - Business CSV upload with required-column, numeric, finite, non-negative, and empty-input validation.
 - Downloadable classified CSV files and customer PDF reports.
-- ML Lab views for preprocessing, PCA, K-Means, and BIRCH.
+- Home explains the preprocessing and clustering pipeline used by the app.
 - Live K-Means versus BIRCH evaluation using silhouette, Davies-Bouldin, and Calinski-Harabasz metrics.
 - Pytest coverage and a GitHub Actions test workflow.
 
